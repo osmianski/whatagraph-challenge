@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Exceptions\NotImplemented;
 use App\Whatagraph\Dimension;
 use App\Whatagraph\Metric;
 use App\Whatagraph\Whatagraph;

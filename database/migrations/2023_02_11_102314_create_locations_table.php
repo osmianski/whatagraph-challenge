@@ -18,8 +18,8 @@ return new class extends Migration
             $table->timestampsTz();
 
             $table->string('address');
-            $table->float('latitude')->nullable();
-            $table->float('longitude')->nullable();
+            $table->double('latitude')->nullable();
+            $table->double('longitude')->nullable();
             $table->dateTimeTz('synced_at')->nullable();
             $table->dateTimeTz('scheduled_at')->nullable();
             $table->string('status')->nullable();

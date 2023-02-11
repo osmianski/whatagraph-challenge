@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 class Whatagraph
 {
-    protected string $baseUrl = 'https://api.whatagraph.com/v1';
+    protected string $baseUrl = 'https://api.whatagraph.com';
     protected string $bearerToken;
 
     public function __construct(string $bearerToken = null)
@@ -65,66 +65,66 @@ class Whatagraph
 
     public function getMetrics(): Collection
     {
-        return collect($this->get('/integration-metrics/')->data)
+        return collect($this->get('/v1/integration-metrics/')->data)
             ->keyBy('external_id')
             ->map(fn (\stdClass $object) => Metric::fromApi($object));
     }
 
     public function createMetric(Metric $metric): void
     {
-        $this->post('/integration-metrics/', $metric);
+        $this->post('/v1/integration-metrics/', $metric);
     }
 
     public function updateMetric(int $id, Metric $metric): void
     {
-        $this->put("/integration-metrics/{$id}", $metric);
+        $this->put("/v1/integration-metrics/{$id}", $metric);
     }
 
     public function deleteMetric(int $id): void
     {
-        $this->delete("/integration-metrics/{$id}");
+        $this->delete("/v1/integration-metrics/{$id}");
     }
 
     public function getDimensions(): Collection
     {
-        return collect($this->get('/integration-dimensions/')->data)
+        return collect($this->get('/v1/integration-dimensions/')->data)
             ->keyBy('external_id')
             ->map(fn (\stdClass $object) => Dimension::fromApi($object));
     }
 
     public function createDimension(Dimension $dimension): void
     {
-        $this->post('/integration-dimensions/', $dimension);
+        $this->post('/v1/integration-dimensions/', $dimension);
     }
 
     public function updateDimension(int $id, Dimension $dimension): void
     {
-        $this->put("/integration-dimensions/{$id}", $dimension);
+        $this->put("/v1/integration-dimensions/{$id}", $dimension);
     }
 
     public function deleteDimension(int $id): void
     {
-        $this->delete("/integration-dimensions/{$id}");
+        $this->delete("/v1/integration-dimensions/{$id}");
     }
 
     public function getDataPoints(): Collection
     {
-        return collect($this->get('/integration-source-data/')->data)
+        return collect($this->get('/v1/integration-source-data/')->data)
             ->map(fn (\stdClass $object) => DataPoint::fromApi($object));
     }
 
     public function createDataPoint(DataPoint $dataPoint): void
     {
-        $this->post('/integration-source-data/', $dataPoint);
+        $this->post('/v1/integration-source-data/', $dataPoint);
     }
 
     public function updateDataPoint(string $id, DataPoint $dataPoint): void
     {
-        $this->put("/integration-source-data/{$id}", $dataPoint);
+        $this->put("/v1/integration-source-data/{$id}", $dataPoint);
     }
 
     public function deleteDataPoint(string $id): void
     {
-        $this->delete("/integration-source-data/{$id}");
+        $this->delete("/v1/integration-source-data/{$id}");
     }
 }

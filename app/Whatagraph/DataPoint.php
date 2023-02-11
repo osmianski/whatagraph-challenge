@@ -2,7 +2,7 @@
 
 namespace App\Whatagraph;
 
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 
 class DataPoint implements \JsonSerializable
 {
