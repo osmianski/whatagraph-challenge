@@ -2,6 +2,9 @@
 
 namespace App\Whatagraph;
 
+use App\Enums\Daytime;
+use App\Exceptions\NotImplemented;
+use App\Weather\Current;
 use Illuminate\Support\Carbon;
 
 class DataPoint implements \JsonSerializable
@@ -10,6 +13,16 @@ class DataPoint implements \JsonSerializable
     public Carbon $date;
 
     public array $data;
+
+    static public function new(Carbon $date, array $data): static
+    {
+        $instance = new static();
+
+        $instance->date = $date;
+        $instance->data = $data;
+
+        return $instance;
+    }
 
     static public function fromApi(\stdClass $data): static
     {
@@ -26,7 +39,7 @@ class DataPoint implements \JsonSerializable
     {
         return (object)array_merge(
             $this->data,
-            ['date' => $this->date->format('YY-MM-DD')]
+            ['date' => $this->date->format('Y-m-d')]
         );
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 
 class Info
 {
+    public string $timezone;
     public ?Current $current;
     public ?Collection $forecasts;
 
@@ -14,13 +15,14 @@ class Info
     {
         $instance = new static();
 
+        $instance->timezone = $data->timezone;
         $instance->current = isset($data->current)
-            ? Current::fromApi($data->current)
+            ? Current::fromApi($data->current, $data->timezone)
             : null;
 
         $instance->forecasts = isset($data->daily)
             ? collect($data->daily)
-                ->map(fn (\stdClass $day) => Forecast::fromApi($day))
+                ->map(fn (\stdClass $day) => Forecast::fromApi($day, $data->timezone))
             : null;
 
         return $instance;

@@ -16,12 +16,12 @@ class Whatagraph
         $this->bearerToken = $bearerToken ?? env('WHATAGRAPH_API_KEY');
     }
 
-    protected function get(string $path): \stdClass {
+    protected function get(string $path, array $query = []): \stdClass {
         $response = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => "Bearer {$this->bearerToken}",
             ])
-            ->get($this->baseUrl . $path);
+            ->get($this->baseUrl . $path, $query);
 
         // Throw an exception if a client or server error occurred.
         $response->throw();
@@ -30,7 +30,7 @@ class Whatagraph
         return $response->object();
     }
 
-    protected function post(string $path, mixed $body): void {
+    protected function post(string $path, mixed $body): mixed {
         $response = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => "Bearer {$this->bearerToken}",
@@ -39,6 +39,8 @@ class Whatagraph
 
         // Throw an exception if a client or server error occurred.
         $response->throw();
+
+        return $response->object();
     }
 
     protected function put(string $path, mixed $body): void {
@@ -107,24 +109,46 @@ class Whatagraph
         $this->delete("/v1/integration-dimensions/{$id}");
     }
 
-    public function getDataPoints(): Collection
+    public function getDataPoints($filters = array()): Collection
     {
-        return collect($this->get('/v1/integration-source-data/')->data)
+        return collect($this->get('/v1/integration-source-data/', $filters)->data)
             ->map(fn (\stdClass $object) => DataPoint::fromApi($object));
     }
 
-    public function createDataPoint(DataPoint $dataPoint): void
+    public function createDataPoint(DataPoint $dataPoint): string
     {
-        $this->post('/v1/integration-source-data/', $dataPoint);
+        $created = $this->post('/v1/integration-source-data/', (object)[
+            'data' => [$dataPoint],
+        ]);
+
+        return $created->data[0]->id;
     }
 
     public function updateDataPoint(string $id, DataPoint $dataPoint): void
     {
-        $this->put("/v1/integration-source-data/{$id}", $dataPoint);
+        $this->put("/v1/integration-source-data/{$id}", (object)[
+            'data' => $dataPoint,
+        ]);
     }
 
     public function deleteDataPoint(string $id): void
     {
         $this->delete("/v1/integration-source-data/{$id}");
+    }
+
+    /**
+     * @deprecated
+     *
+     * @param DataPoint $dataPoint
+     * @return string|null
+     */
+    public function findDataPoint(DataPoint $dataPoint): ?string
+    {
+        $filters = [];
+        foreach (array_keys(config('whatagraph.dimensions')) as $dimension) {
+            $filters[$dimension] = $dataPoint->data[$dimension] ?? null;
+        }
+
+        return $this->getDataPoints($filters)->first()->id ?? null;
     }
 }
