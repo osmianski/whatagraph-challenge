@@ -36,14 +36,24 @@ class Weather
         return Coords::fromApi($data[0]);
     }
 
-    public function getForecast(float $latitude, float $longitude): Forecast
+    public function getInfo(float $latitude, float $longitude,
+        bool  $current = true, bool $forecast = true): Info
     {
+        $exclude = 'hourly,minutely';
+        if (!$current) {
+            $exclude .= ',current';
+        }
+        if (!$forecast) {
+            $exclude .= ',daily';
+        }
+
         $data = $this->get('/data/3.0/onecall', [
             'lat' => $latitude,
-            'long' => $longitude,
-            'exclude' => 'hourly,minutely',
+            'lon' => $longitude,
+            'exclude' => $exclude,
+            'units' => 'metric',
         ]);
 
-        return Forecast::fromApi($data);
+        return Info::fromApi($data);
     }
 }

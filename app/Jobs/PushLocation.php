@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\NotImplemented;
 use App\Models\Location;
 use App\Weather\Weather;
 use App\Whatagraph\Whatagraph;
@@ -19,13 +20,18 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
     protected Location $location;
     protected Weather $weather;
     protected Whatagraph $whatagraph;
+    private bool $current;
+    private bool $forecast;
 
     public function __construct(Location $location, Weather $weather = null,
-        Whatagraph $whatagraph = null)
+        Whatagraph $whatagraph = null, bool $current = true,
+        bool $forecast = true)
     {
         $this->location = $location;
         $this->weather = $weather ?? new Weather();
         $this->whatagraph = $whatagraph ?? new Whatagraph();
+        $this->current = $current;
+        $this->forecast = $forecast;
     }
 
     public function uniqueId()
@@ -35,6 +41,10 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
 
     public function handle(): void
     {
+        if (!$this->current && !$this->forecast) {
+            return;
+        }
+
         if ($this->location->latitude === null || $this->location->longitude === null) {
             $coords = $this->weather->getGeoCoords($this->location->address);
             $this->location->latitude = $coords->latitude;
@@ -42,7 +52,26 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
             $this->location->save();
         }
 
-        $forecast = $this->weather->getForecast($this->location->latitude,
-            $this->location->longitude);
+        $info = $this->weather->getInfo($this->location->latitude,
+            $this->location->longitude, current: $this->current,
+            forecast: $this->forecast);
+
+        if ($this->current) {
+            $this->pushCurrent($info->current);
+        }
+
+        if ($this->forecast) {
+            $this->pushForecasts($info->forecasts);
+        }
+    }
+
+    protected function pushCurrent(?\App\Weather\Current $current): void
+    {
+        throw new NotImplemented();
+    }
+
+    protected function pushForecasts(?\Illuminate\Support\Collection $forecasts): void
+    {
+        throw new NotImplemented();
     }
 }
