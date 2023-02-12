@@ -18,4 +18,14 @@ class Coords
 
         return $instance;
     }
+
+    static public function new(string $address, float $latitude, float $longitude): static {
+        $instance = new static();
+
+        $instance->address = $address;
+        $instance->latitude = $latitude;
+        $instance->longitude = $longitude;
+
+        return $instance;
+    }
 }

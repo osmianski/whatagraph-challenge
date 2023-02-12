@@ -28,4 +28,15 @@ class Info
         return $instance;
     }
 
+    static public function new(string $timezone, Current $current = null,
+        array $forecasts = null): static
+    {
+        $instance = new static();
+
+        $instance->timezone = $timezone;
+        $instance->current = $current;
+        $instance->forecasts = $forecasts ? collect($forecasts) : null;
+
+        return $instance;
+    }
 }

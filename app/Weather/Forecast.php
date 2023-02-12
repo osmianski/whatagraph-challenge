@@ -38,4 +38,17 @@ class Forecast
 
         return $instance;
     }
+
+    static public function new(Carbon $datetime, int $pressure, int $humidity,
+        array $daytimes): static
+    {
+        $instance = new static();
+
+        $instance->datetime = $datetime;
+        $instance->pressure = $pressure;
+        $instance->humidity = $humidity;
+        $instance->daytimes = $daytimes;
+
+        return $instance;
+    }
 }

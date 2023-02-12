@@ -26,4 +26,18 @@ class Current
 
         return $instance;
     }
+
+    static public function new(Carbon $datetime, float $temperature,
+        float $feelsLike, int $pressure, int $humidity): static
+    {
+        $instance = new static();
+
+        $instance->datetime = $datetime;
+        $instance->temperature = $temperature;
+        $instance->feelsLike = $feelsLike;
+        $instance->pressure = $pressure;
+        $instance->humidity = $humidity;
+
+        return $instance;
+    }
 }
