@@ -173,6 +173,8 @@ return [
 ];
 ```
 
+There are two types of metrics - real-life metrics (`day_temperature`, `humidity`) and their forecasts (`day_temperature_forecast`, `humidity_forecast`). 
+
 The additional `whatagraph:init --fresh` option deletes all previously uploaded data points fromthe Whatagraph server. 
 
 ### `whatagraph:push` command
@@ -183,4 +185,91 @@ For every location specified in the `config/locations.php` file, this command di
 return [
     'Vilnius',
 ];
+```
+
+The additional `--current` option, if present, makes the `PushLocation` to only push the current weather, and skip the forecasts.
+
+### `PushLocation` job
+
+The job logic is pretty much self-descriptive:
+
+```php
+public function handle(): void
+{
+    $info = $this->getInfo();
+
+    $this->prepareCurrent($info->current);
+
+    if ($this->forecast) {
+        foreach ($info->forecasts as $forecast) {
+            if (!$this->isTodayForecast($forecast, $info)) {
+                $this->prepareForecast($forecast);
+            }
+        }
+    }
+
+    $this->pushDataPoints();
+}
+```
+
+In the `getInfo()` method, it gets the geographic coordinates of specified location address, and fetches the weather information into the `$info` variable.
+
+Then, it prepares an array of data points to be pushed to Whatagraph in two steps:
+
+1. The `prepareCurrent()` method adds today's data point filled in with real-life data. Day/night temperatures are only added if the job is executed at day or night, respectfully.
+2. The `prepareForecast()` method adds a data point in the near future, up to 8 days ahead, filled in with forecast data.
+ 
+Finally, the `pushDataPoints()` method pushes the prepared data points. New data points are pushed in a single API call using the `Whatagraph::createDataPoints()` method, while the data points sent earlier are updated one at a time using the `Whatagraph::updateDataPoint()` method. 
+
+### Using cache
+
+For better performance, the `PushLocation` job uses cache. It remembers:
+
+1. `coords:{$location}` keys - geographic coordinates of specified location address.
+2. `id:{$location},{$date}` keys - Whatagraph IDs of all data points sent earlier.
+
+The `id:...` cache entries are tagged with the `id` tag. It's used in the `whatagraph:init --fresh` command to forget all the IDs of cleared data points:
+
+```php
+Cache::tags('id')->flush();
+```
+
+### Schedule
+
+In production, the `whatagraph:push` command is scheduled to run twice a day in the `App\Console\Kernel::schedule()` method:
+
+```php
+$schedule->command('whatagraph:push')
+    ->dailyAt('02:00');
+$schedule->command('whatagraph:push --current')
+    ->dailyAt('14:00');
+```
+
+At night, it pushes both the actual night data and the forecasts. At day, it only pushes the actual day data.
+
+### Retry strategy
+
+In production, use asynchronous queue (for example, stored in Redis). It will enable the `PushLocation` command to retry itself in case of failure of the APIs:
+
+```php
+class PushLocation implements ShouldQueue, ShouldBeUnique
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public int $tries = 10;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var int
+     */
+    public int $backoff = 60 * 30; // 30 minutes
+
+    ...
+}
 ```

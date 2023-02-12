@@ -44,7 +44,6 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
     protected string $location;
     protected Weather $weather;
     protected Whatagraph $whatagraph;
-    protected bool $current;
     protected bool $forecast;
     /**
      * @var array|DataPoint[]
@@ -52,13 +51,11 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
     protected array $dataPoints = [];
 
     public function __construct(string $location, Weather $weather = null,
-        Whatagraph $whatagraph = null, bool $current = true,
-        bool $forecast = true)
+        Whatagraph $whatagraph = null, bool $forecast = true)
     {
         $this->location = $location;
         $this->weather = $weather ?? new Weather();
         $this->whatagraph = $whatagraph ?? new Whatagraph();
-        $this->current = $current;
         $this->forecast = $forecast;
     }
 
@@ -69,26 +66,15 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
 
     public function handle(): void
     {
-        if (!$this->current && !$this->forecast) {
-            return;
-        }
-
         $info = $this->getInfo();
 
-        if ($this->current) {
-            $this->prepareCurrent($info->current);
-        }
+        $this->prepareCurrent($info->current);
 
         if ($this->forecast) {
             foreach ($info->forecasts as $forecast) {
-                /* @var Forecast $forecast */
-                if ($forecast->datetime->format('Y-m-d') ===
-                    $info->current->datetime->format('Y-m-d'))
-                {
-                    continue;
+                if (!$this->isTodayForecast($forecast, $info)) {
+                    $this->prepareForecast($forecast);
                 }
-
-                $this->prepareForecast($forecast);
             }
         }
 
@@ -199,7 +185,12 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
         $coords = $this->geoLocate();
 
         return $this->weather->getInfo($coords->latitude,
-            $coords->longitude, current: $this->current,
-            forecast: $this->forecast);
+            $coords->longitude, forecast: $this->forecast);
+    }
+
+    protected function isTodayForecast(Forecast $forecast, Info $info): bool
+    {
+        return $forecast->datetime->format('Y-m-d') ===
+            $info->current->datetime->format('Y-m-d');
     }
 }
