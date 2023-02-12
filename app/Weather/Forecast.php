@@ -3,7 +3,6 @@
 namespace App\Weather;
 
 use App\Enums\Daytime;
-use App\Exceptions\NotImplemented;
 use Illuminate\Support\Carbon;
 
 class Forecast

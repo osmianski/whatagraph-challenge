@@ -2,7 +2,6 @@
 
 namespace App\Weather;
 
-use App\Exceptions\NotImplemented;
 use Illuminate\Support\Collection;
 
 class Info

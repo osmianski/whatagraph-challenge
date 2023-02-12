@@ -3,9 +3,6 @@
 namespace App\Jobs;
 
 use App\Enums\Daytime;
-use App\Enums\YesNo;
-use App\Exceptions\NotImplemented;
-use App\Models\Location;
 use App\Weather\Coords;
 use App\Weather\Current;
 use App\Weather\Forecast;
@@ -20,7 +17,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class PushLocation implements ShouldQueue, ShouldBeUnique

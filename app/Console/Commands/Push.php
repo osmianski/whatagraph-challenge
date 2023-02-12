@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Jobs\PushLocation;
-use App\Models\Location;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 

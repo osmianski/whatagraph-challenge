@@ -2,8 +2,6 @@
 
 namespace App\Whatagraph;
 
-use App\Exceptions\NotImplemented;
-
 class Dimension implements \JsonSerializable
 {
     public ?int $id = null;

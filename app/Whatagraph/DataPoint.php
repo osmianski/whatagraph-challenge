@@ -2,9 +2,6 @@
 
 namespace App\Whatagraph;
 
-use App\Enums\Daytime;
-use App\Exceptions\NotImplemented;
-use App\Weather\Current;
 use Illuminate\Support\Carbon;
 
 class DataPoint implements \JsonSerializable

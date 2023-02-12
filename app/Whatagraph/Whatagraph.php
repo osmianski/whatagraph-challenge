@@ -2,7 +2,6 @@
 
 namespace App\Whatagraph;
 
-use App\Exceptions\NotImplemented;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 

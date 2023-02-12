@@ -2,8 +2,6 @@
 
 namespace App\Whatagraph;
 
-use App\Exceptions\NotImplemented;
-
 class Metric implements \JsonSerializable
 {
     public ?int $id = null;
