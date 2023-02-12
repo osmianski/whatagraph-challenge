@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class DataPoint implements \JsonSerializable
 {
-    public string $id;
+    public ?string $id;
     public Carbon $date;
 
     public array $data;

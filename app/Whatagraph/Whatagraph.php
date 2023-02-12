@@ -124,6 +124,24 @@ class Whatagraph
         return $created->data[0]->id;
     }
 
+    /**
+     * @param array|DataPoint[] $dataPoints
+     * @return array|string[]
+     */
+    public function createDataPoints(array $dataPoints): array
+    {
+        $created = $this->post('/v1/integration-source-data/', (object)[
+            'data' => $dataPoints,
+        ]);
+
+        $result = [];
+        foreach (array_keys($dataPoints) as $key) {
+            $result[$key] = $created->data->$key->id;
+        }
+
+        return $result;
+    }
+
     public function updateDataPoint(string $id, DataPoint $dataPoint): void
     {
         $this->put("/v1/integration-source-data/{$id}", (object)[

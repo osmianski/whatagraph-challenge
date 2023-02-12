@@ -15,7 +15,7 @@ class Push extends Command
 
     public function handle(): int
     {
-        foreach (Location::all(['id']) as $location) {
+        foreach (config('locations') as $location) {
             Bus::dispatch(new PushLocation($location));
         }
 

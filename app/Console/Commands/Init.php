@@ -6,6 +6,7 @@ use App\Whatagraph\Dimension;
 use App\Whatagraph\Metric;
 use App\Whatagraph\Whatagraph;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class Init extends Command
 {
@@ -78,8 +79,15 @@ class Init extends Command
 
     protected function deleteExistingData(): void
     {
-        foreach ($this->whatagraph->getDataPoints() as $dataPoint) {
-            $this->whatagraph->deleteDataPoint($dataPoint->id);
+        $dataPoints = $this->whatagraph->getDataPoints();
+        while ($dataPoints->isNotEmpty()) {
+            foreach ($this->whatagraph->getDataPoints() as $dataPoint) {
+                $this->whatagraph->deleteDataPoint($dataPoint->id);
+            }
+
+            $dataPoints = $this->whatagraph->getDataPoints();
         }
+
+        Cache::tags('id')->flush();
     }
 }

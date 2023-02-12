@@ -26,13 +26,13 @@ class Forecast
         $instance->humidity = $data->humidity;
 
         $instance->daytimes = [
-            new DaytimeForecast(Daytime::Morning,
+            Daytime::Morning->value => new DaytimeForecast(
                 $data->temp->morn, $data->feels_like->morn),
-            new DaytimeForecast(Daytime::Day,
+            Daytime::Day->value => new DaytimeForecast(
                 $data->temp->day, $data->feels_like->day),
-            new DaytimeForecast(Daytime::Evening,
+            Daytime::Evening->value => new DaytimeForecast(
                 $data->temp->eve, $data->feels_like->eve),
-            new DaytimeForecast(Daytime::Night,
+            Daytime::Night->value => new DaytimeForecast(
                 $data->temp->night, $data->feels_like->night),
         ];
 

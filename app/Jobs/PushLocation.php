@@ -6,6 +6,7 @@ use App\Enums\Daytime;
 use App\Enums\YesNo;
 use App\Exceptions\NotImplemented;
 use App\Models\Location;
+use App\Weather\Coords;
 use App\Weather\Current;
 use App\Weather\Forecast;
 use App\Weather\Info;
@@ -18,6 +19,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -25,13 +27,17 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected Location $location;
+    protected string $location;
     protected Weather $weather;
     protected Whatagraph $whatagraph;
-    private bool $current;
-    private bool $forecast;
+    protected bool $current;
+    protected bool $forecast;
+    /**
+     * @var array|DataPoint[]
+     */
+    protected array $dataPoints = [];
 
-    public function __construct(Location $location, Weather $weather = null,
+    public function __construct(string $location, Weather $weather = null,
         Whatagraph $whatagraph = null, bool $current = true,
         bool $forecast = true)
     {
@@ -44,7 +50,7 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
 
     public function uniqueId()
     {
-        return $this->location->id;
+        return $this->location;
     }
 
     public function handle(): void
@@ -53,68 +59,64 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
             return;
         }
 
-        $this->geoLocate();
-
-        $info = $this->weather->getInfo($this->location->latitude,
-            $this->location->longitude, current: $this->current,
-            forecast: $this->forecast);
+        $info = $this->getInfo();
 
         if ($this->current) {
-            $this->pushCurrent($info->current);
+            $this->prepareCurrent($info->current);
         }
 
         if ($this->forecast) {
             foreach ($info->forecasts as $forecast) {
-                $this->pushForecast($forecast);
+                /* @var Forecast $forecast */
+                if ($forecast->datetime->format('Y-m-d') ===
+                    $info->current->datetime->format('Y-m-d'))
+                {
+                    continue;
+                }
+
+                $this->prepareForecast($forecast);
             }
         }
+
+        $this->pushDataPoints();
     }
 
-    protected function pushCurrent(Current $current): void
+    protected function prepareCurrent(Current $current): void
     {
-        $daytime = $this->getDaytime($current);
-
-        $this->pushDataPoint(DataPoint::new($current->datetime, [
-            'is_forecast' => YesNo::No->value,
-            'location' => $this->location->address,
-            'daytime' => 'N/A',
+        $data = [
+            'location' => $this->location,
             'pressure' => $current->pressure,
             'humidity' => $current->humidity,
-        ]));
+        ];
 
-        $this->pushDataPoint(DataPoint::new($current->datetime, [
-            'is_forecast' => YesNo::No->value,
-            'location' => $this->location->address,
-            'daytime' => $daytime->value,
-            'temperature' => $current->temperature,
-            'feels_like' => $current->feelsLike,
-        ]));
-    }
-
-    protected function pushForecast(Forecast $forecast): void
-    {
-        $this->pushDataPoint(DataPoint::new($forecast->datetime, [
-            'is_forecast' => YesNo::Yes->value,
-            'location' => $this->location->address,
-            'daytime' => 'N/A',
-            'pressure' => $forecast->pressure,
-            'humidity' => $forecast->humidity,
-        ]));
-
-        foreach ($forecast->daytimes as $daytimeForecast) {
-            $this->pushDataPoint(DataPoint::new($forecast->datetime, [
-                'is_forecast' => YesNo::Yes->value,
-                'location' => $this->location->address,
-                'daytime' => $daytimeForecast->daytime->value,
-                'temperature' => $daytimeForecast->temperature,
-                'feels_like' => $daytimeForecast->feelsLike,
-            ]));
+        if ($prefix = $this->getDaytimePrefix($current->datetime)) {
+            $data["{$prefix}temperature"] = $current->temperature;
+            $data["{$prefix}feels_like"] = $current->feelsLike;
         }
+
+        $this->prepareDataPoint($current->datetime, $data);
     }
 
-    protected function getDaytime(Current $current): Daytime
+    protected function prepareForecast(Forecast $forecast): void
     {
-        $hour = $current->datetime->hour;
+        $this->prepareDataPoint($forecast->datetime, [
+            'location' => $this->location,
+            'pressure_forecast' => $forecast->pressure,
+            'humidity_forecast' => $forecast->humidity,
+            'day_temperature_forecast' =>
+                $forecast->daytimes[Daytime::Day->value]->temperature,
+            'night_temperature_forecast' =>
+                $forecast->daytimes[Daytime::Night->value]->temperature,
+            'day_feels_like_forecast' =>
+                $forecast->daytimes[Daytime::Day->value]->feelsLike,
+            'night_feels_like_forecast' =>
+                $forecast->daytimes[Daytime::Night->value]->feelsLike,
+        ]);
+    }
+
+    protected function getDaytime(Carbon $datetime): Daytime
+    {
+        $hour = $datetime->hour;
 
         return match (true) {
             $hour >= 4 && $hour < 10 => Daytime::Morning,
@@ -124,39 +126,66 @@ class PushLocation implements ShouldQueue, ShouldBeUnique
         };
     }
 
-    protected function geoLocate(): void
+    protected function getDaytimePrefix(Carbon $datetime): ?string
     {
-        if ($this->location->latitude !== null) {
+        return match ($this->getDaytime($datetime)) {
+            Daytime::Day => 'day_',
+            Daytime::Night => 'night_',
+            default => null,
+        };
+    }
+
+    protected function geoLocate(): Coords
+    {
+        return Cache::remember(
+            "coords:{$this->location}",
+            now()->addDays(30),
+            fn() => $this->weather->getGeoCoords($this->location)
+        );
+    }
+
+    protected function prepareDataPoint(Carbon $datetime, array $data): void
+    {
+        $date = $datetime->format('Y-m-d');
+        if ($dataPoint = $this->dataPoints[$date] ?? null) {
+            $dataPoint->data = array_merge($dataPoint->data, $data);
             return;
         }
 
-        $coords = $this->weather->getGeoCoords($this->location->address);
-        $this->location->latitude = $coords->latitude;
-        $this->location->longitude = $coords->longitude;
-        $this->location->save();
+        $dataPoint = DataPoint::new($datetime, $data);
+        $dataPoint->id = Cache::tags('id')
+            ->get("id:{$this->location},$date");
+        $this->dataPoints[$date] = $dataPoint;
     }
 
-    protected function pushDataPoint(DataPoint $dataPoint): void
+    protected function pushDataPoints(): void
     {
-        $cacheKey = $this->getCacheKey($dataPoint);
-        if ($id = Cache::get($cacheKey)) {
-            $this->whatagraph->updateDataPoint($id, $dataPoint);
+        /* @var DataPoint[] $dataPoints */
+        $dataPoints = collect($this->dataPoints)->whereNull('id')->toArray();
+        if (!empty($dataPoints)) {
+            $ids = $this->whatagraph->createDataPoints($dataPoints);
+            foreach ($ids as $date => $id) {
+                Cache::tags('id')
+                    ->put("id:{$this->location},$date", $id,
+                        now()->addDays(30));
+            }
         }
-        else {
-            Cache::put($cacheKey, $this->whatagraph->createDataPoint($dataPoint),
-                now()->addDays(30));
+
+        $dataPoints = collect($this->dataPoints)->whereNotNull('id')->toArray();
+        foreach ($dataPoints as $dataPoint) {
+            $this->whatagraph->updateDataPoint($dataPoint->id, $dataPoint);
         }
     }
 
-    protected function getCacheKey(DataPoint $dataPoint): string
+    /**
+     * @return Info
+     */
+    protected function getInfo(): Info
     {
-        $dimensions = ['date' => $dataPoint->date->format('Y-m-d')];
+        $coords = $this->geoLocate();
 
-        foreach (array_keys(config('whatagraph.dimensions')) as $dimension) {
-            $dimensions[$dimension] = $dataPoint->data[$dimension];
-        }
-        ksort($dimensions);
-
-        return sha1(json_encode($dimensions));
+        return $this->weather->getInfo($coords->latitude,
+            $coords->longitude, current: $this->current,
+            forecast: $this->forecast);
     }
 }
