@@ -5,6 +5,7 @@
     * [Docker](#docker)
     * [Prerequisites](#prerequisites)
     * [Installation](#installation)
+    * [Tests](#tests)
 * [How it works](#how-it-works)
     * [Whatagraph API](#whatagraph-api)
     * [Weather API](#weather-api)
@@ -101,6 +102,18 @@ Install the project into the `~/projects/whatagraph-challenge` directory (the "p
         sail artisan whatagraph:push
 
 6. Visualize weather data in Whatagraph reports.
+
+### Tests
+
+This project uses Pest. To run tests, use the following command:
+
+    sail test
+
+Test coverage is intentionally limited due to lack of time. In addition to the integration logic covered in the `tests/Feature/IntegrationTest.php` file, here are some more ideas for testing:
+
+* Test how `App\Whatagraph` and `App\Weather` namespaces translate the PHP API calls into the HTTP calls, and responses back to PHP call results.
+* Test more edge cases in the integration logic.
+* Test that the external service interfaces don't change unnoticed. 
 
 ## How it works
 
