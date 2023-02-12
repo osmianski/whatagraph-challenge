@@ -15,7 +15,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('whatagraph:push')
+            ->dailyAt('02:00');
+        $schedule->command('whatagraph:push --current')
+            ->dailyAt('14:00');
     }
 
     /**

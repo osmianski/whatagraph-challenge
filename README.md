@@ -1,7 +1,6 @@
 # Open Weather Map - Whatagraph integration
 
 * [Introduction](#introduction)
-* [Usage](#usage)
 * [Local installation](#local-installation)
     * [Docker](#docker)
     * [Prerequisites](#prerequisites)
@@ -97,3 +96,91 @@ Install the project into the `~/projects/whatagraph-challenge` directory (the "p
 6. Visualize weather data in Whatagraph reports.
 
 ## How it works
+
+### Whatagraph API
+
+The `App\Whatagraph\Whatagraph` class, and other classes in the `App\Whatagraph` namespace, provide a convenient object model for making Whatagraph API calls.
+
+Example:
+
+```php
+// Create a connection object. Provide the API key explicitly, or use the one from
+// `.env` file
+$whatagraph = new Whatagraph('api_key');
+
+// Create one or more metrics
+$metric = new Metric();
+...
+$whatagraph->createMetric($metric);
+
+// Create one or more dimensions
+$dimension = new Dimension();
+...
+$whatagraph->createDimension($dimension);
+
+// Push data points. Batch multiple data points into a single call for better
+// performance
+$whatagraph->createDataPoints([
+    DataPoint::new(now(), [
+        ...
+    ]),
+    ...
+]);
+```
+
+### Weather API
+
+The `App\Weather\Weather` class, and other classes in the `App\Weather` namespace, provide a convenient object model for making Whather API calls.
+
+Example:
+
+```php
+// Create a connection object. Provide the API key explicitly, or use the one from
+// `.env` file
+$weather = new Weather('api_key');
+
+// Convert an address string to geographic coordinates
+$coords = $weather->getGeoCoords('Vilnius');
+
+// Retrieve weather data for the geographic coordinates
+$weatherInfo = $weather->getInfo($coords->latitude, $coords->longitude);
+```
+
+### `whatagraph:init` command
+
+This command reads configuration of Whatagraph metrics and dimensions from the `config/whatagraph.php` file, and intelligently creates/updates/deletes these definitions on Whatagraph server. The configuration file is straightforward:
+
+```php
+return [
+    'api_key' => env('WHATAGRAPH_API_KEY'),
+
+    'dimensions' => [
+        'location' => [
+            'title' => 'Location',
+            'type' => Dimension\Type::String_,
+        ],
+    ],
+
+    'metrics' => [
+        'day_temperature' => [
+            'title' => 'Day Temperature',
+            'type' => Metric\Type::Float_,
+            'accumulator' => Metric\Accumulator::Average,
+            'negative_ratio' => false,
+        ],
+        ...
+    ],
+];
+```
+
+The additional `whatagraph:init --fresh` option deletes all previously uploaded data points fromthe Whatagraph server. 
+
+### `whatagraph:push` command
+
+For every location specified in the `config/locations.php` file, this command dispatches a queued job, `PushLocation`, that pushes the weather data of the location. The `config/locations.php` file is just an array of location addresses:
+
+```php
+return [
+    'Vilnius',
+];
+```
