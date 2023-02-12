@@ -1,66 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Open Weather Map - Whatagraph integration
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+* [Introduction](#introduction)
+* [Usage](#usage)
+* [Local installation](#local-installation)
+    * [Docker](#docker)
+    * [Prerequisites](#prerequisites)
+    * [Installation](#installation)
+* [How it works](#how-it-works)
 
-## About Laravel
+## Introduction
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+This project pulls data from [One Call API 3.0](https://openweathermap.org/api/one-call-3) weather API for specified locations via a Geocoding API, and then pushes the data back into the [Whatagraph API](https://api.whatagraph.com/public-api/index.html) via a RESTful API.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Local installation
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Docker
 
-## Learning Laravel
+Consider using Docker:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```mermaid
+flowchart TD;
+    A(Your local machine)
+    subgraph laravel.test
+        D(Shell)
+    end
+    subgraph redis
+        F[(Cache)]      
+        G[(Queue)]      
+    end
+    A --> laravel.test
+    laravel.test --> redis
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+As you can see in the `docker-compose.yml`, it uses 2 containers:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+* `laravel.test` container runs PHP code - CLI commands.
+* `redis` container stores the cache and the job queue.
 
-## Laravel Sponsors
+### Prerequisites
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+Before installing the project:
 
-### Premium Partners
+* Install
+    * PHP 8.1
+    * Composer
+    * Node.js
+    * Docker 2
+    * Docker Compose
+* [Create the `sail` shell alias](https://laravel.com/docs/9.x/sail#configuring-a-shell-alias).
+* Create an [Open Weather Map](https://openweathermap.org/) account and subscribe to the "One Call by Call" plan.
+* Create a Whatagraph account, create new "Custom API" source and name it "Weather".
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+### Installation
 
-## Contributing
+Install the project into the `~/projects/whatagraph-challenge` directory (the "project directory"):
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. Download and prepare the project files using the following commands:
 
-## Code of Conduct
+        cd ~/projects
+        git clone git@github.com:osmianski/whatagraph-challenge.git
+        cd whatagraph-challenge
+        composer install
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate --ansi
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+2. In a separate terminal window, start the Docker containers by running the following commands, and keeping it running there:
 
-## Security Vulnerabilities
+        cd ~/projects/whatagraph-challenge
+        sail up
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+3. In the `.env` file, add API keys from the Open Weather Map account and Whatagraph custom API definition, respectively:
 
-## License
+        # Connect to https://openweathermap.org/api
+        WEATHER_API_KEY=
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+        # Connect to https://api.whatagraph.com
+        WHATAGRAPH_API_KEY=
+
+4. Specify one or more locations to fetch weather data for in the `config/locations.php` file. Use exact street addresses, or just cities:
+
+        return [
+            'Vilnius',
+        ];
+ 
+5. Push data to Whatagraph: 
+
+        cd ~/projects/whatagraph-challenge
+        
+        # Configure dimensions and metrics. optionally, use --fresh option 
+        # to clear existing Whatagraph data  
+        sail artisan whatagraph:init
+        
+        # Read weather data and push it to Whatagraph 
+        sail artisan whatagraph:push
+
+6. Visualize weather data in Whatagraph reports.
+
+## How it works
