@@ -49,7 +49,7 @@ As you can see in the `docker-compose.yml`, it uses 2 containers:
 Before installing the project:
 
 * Install
-    * PHP 8.1
+    * PHP 8.2
     * Composer
     * Node.js
     * Docker 2
