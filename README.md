@@ -6,6 +6,13 @@
     * [Prerequisites](#prerequisites)
     * [Installation](#installation)
 * [How it works](#how-it-works)
+    * [Whatagraph API](#whatagraph-api)
+    * [Weather API](#weather-api)
+    * [`whatagraph:init` command](#whatagraphinit-command)
+    * [`whatagraph:push` command](#whatagraphpush-command)
+    * [`PushLocation` job](#pushlocation-job)
+    * [Schedule](#schedule)
+    * [Retry strategy](#retry-strategy)
 
 ## Introduction
 
